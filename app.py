@@ -1,4 +1,7 @@
 # app.py - Gunicorn entry point for Render deployment
+from dotenv import load_dotenv
+load_dotenv()
+
 import sys
 import os
 

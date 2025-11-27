@@ -43,9 +43,7 @@ else:
     use_persistent_disk = os.getenv('USE_PERSISTENT_DISK', 'false').lower() == 'true'
 
     if use_persistent_disk and os.path.exists('/data'):
-        # Use persistent disk on Render
         db_path = '/data/app.db'
-        # Initialize with clean DB if it doesn't exist
         if not os.path.exists(db_path):
             import shutil
             clean_db_path = os.path.join(os.path.dirname(__file__), '..', 'cleandb', 'database', 'app.db')
@@ -53,15 +51,19 @@ else:
                 shutil.copyfile(clean_db_path, db_path)
         app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{db_path}"
     else:
-        # Use /tmp for fallback DB, always writable on Render
-        fallback_db_path = '/tmp/app.db'
-        import shutil
+        # Windows-compatible fallback
+        import tempfile
+        temp_dir = tempfile.gettempdir()
+        fallback_db_path = os.path.join(temp_dir, 'app.db')
         clean_db_path = os.path.join(os.path.dirname(__file__), '..', 'cleandb', 'database', 'app.db')
-        # Copy clean DB if not already present
+        
+        # Создаем директорию если не существует
+        os.makedirs(os.path.dirname(fallback_db_path), exist_ok=True)
+        
         if not os.path.exists(fallback_db_path):
             if os.path.exists(clean_db_path):
                 shutil.copyfile(clean_db_path, fallback_db_path)
-            print(f"Copied template DB from {clean_db_path} to {fallback_db_path}")  # or db_path
+                print(f"Copied template DB from {clean_db_path} to {fallback_db_path}")
         app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{fallback_db_path}"
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False

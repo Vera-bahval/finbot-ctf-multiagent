@@ -1,12 +1,12 @@
 from flask import Blueprint, request, jsonify, render_template
 from src.models.vendor import db, Vendor, Invoice, FinBotConfig
 from src.services.finbot_agent import FinBotAgent
+from src.services.multi_agent_finbot import MultiAgentFinBot
 from datetime import datetime
 
 admin_bp = Blueprint('admin', __name__)
 
-# Initialize the new agent
-finbot_agent = FinBotAgent()
+# НЕ инициализируем здесь
 
 @admin_bp.route('/admin/invoices/pending', methods=['GET'])
 def get_pending_invoices():
@@ -67,8 +67,11 @@ def review_invoice(invoice_id):
 @admin_bp.route('/admin/finbot/config', methods=['GET'])
 def get_finbot_config():
     """Get current FinBot configuration"""
-    finbot = FinBotAgent()
-    config = finbot.get_config()
+    config = FinBotConfig.query.first()
+    if not config:
+        config = FinBotConfig()
+        db.session.add(config)
+        db.session.commit()
     return jsonify(config.to_dict())
 
 @admin_bp.route('/admin/finbot/config', methods=['POST'])
@@ -76,11 +79,31 @@ def update_finbot_config():
     """Update FinBot configuration"""
     try:
         data = request.get_json()
-        updated_config = finbot_agent.update_config(data)
+        
+        config = FinBotConfig.query.first()
+        if not config:
+            config = FinBotConfig()
+            db.session.add(config)
+        
+        if 'auto_approve_threshold' in data:
+            config.auto_approve_threshold = data['auto_approve_threshold']
+        if 'manual_review_threshold' in data:
+            config.manual_review_threshold = data['manual_review_threshold']
+        if 'confidence_threshold' in data:
+            config.confidence_threshold = data['confidence_threshold']
+        if 'speed_priority' in data:
+            config.speed_priority = data['speed_priority']
+        if 'fraud_detection_enabled' in data:
+            config.fraud_detection_enabled = data['fraud_detection_enabled']
+        if 'custom_goals' in data:
+            config.custom_goals = data['custom_goals']
+        
+        config.updated_at = datetime.utcnow()
+        db.session.commit()
         
         return jsonify({
             "success": True,
-            "config": updated_config,
+            "config": config.to_dict(),
             "message": "FinBot configuration updated successfully"
         })
         
@@ -96,8 +119,14 @@ def update_finbot_goals():
         if 'goals' not in data:
             return jsonify({"error": "Goals field is required"}), 400
         
-        # This is intentionally vulnerable - no validation of goal content
-        result = finbot_agent.update_goals(data['goals'])
+        config = FinBotConfig.query.first()
+        if not config:
+            config = FinBotConfig()
+            db.session.add(config)
+        
+        config.custom_goals = data['goals']
+        config.updated_at = datetime.utcnow()
+        db.session.commit()
         
         return jsonify({
             "success": True,
@@ -124,8 +153,9 @@ def reprocess_invoice(invoice_id):
         invoice.processed_at = None
         db.session.commit()
         
-        # Reprocess with FinBot
-        result = finbot_agent.process_invoice(invoice_id)
+        # Используем мультиагентную систему
+        multi_agent_finbot = MultiAgentFinBot()
+        result = multi_agent_finbot.process_invoice(invoice_id)
         
         return jsonify({
             "success": True,
@@ -218,8 +248,6 @@ def update_vendor_trust(vendor_id):
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
-
-
 @admin_bp.route('/log-agreement', methods=['POST'])
 def log_agreement():
     """Log user agreement for audit purposes"""
@@ -243,4 +271,3 @@ def log_agreement():
     except Exception as e:
         print(f"Error logging agreement: {e}")
         return jsonify({"error": "Failed to log agreement"}), 500
-
