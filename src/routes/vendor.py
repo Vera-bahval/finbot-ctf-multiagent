@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify
 import json
 import openai
 from src.models.vendor import db, Vendor, Invoice
-# Импортируем новую мультиагентную систему
+# Import the new multi-agent system
 from src.services.multi_agent_finbot import MultiAgentFinBot
 from datetime import datetime
 
@@ -66,7 +66,7 @@ def list_vendors():
 
 @vendor_bp.route('/vendors/<int:vendor_id>/invoices', methods=['POST'])
 def submit_invoice(vendor_id):
-    """Submit an invoice for processing - ТЕПЕРЬ ИСПОЛЬЗУЕТ МУЛЬТИАГЕНТНУЮ СИСТЕМУ"""
+    """Submit an invoice for processing - NOW USES MULTI-AGENT SYSTEM"""
     try:
         vendor = Vendor.query.get(vendor_id)
         if not vendor:
@@ -94,13 +94,13 @@ def submit_invoice(vendor_id):
         db.session.add(invoice)
         db.session.commit()
         
-        # ОБРАБОТКА ЧЕРЕЗ МУЛЬТИАГЕНТНУЮ СИСТЕМУ
+        # PROCESSING THROUGH MULTI-AGENT SYSTEM
         print(f"\n{'='*60}")
         print(f"MULTI-AGENT PROCESSING: Invoice #{invoice.id}")
         print(f"{'='*60}")
         
         try:
-            # Создаем экземпляр внутри функции (внутри контекста Flask)
+            # Create instance inside function (inside Flask context)
             multi_agent_finbot = MultiAgentFinBot()
             result = multi_agent_finbot.process_invoice(invoice.id)
             
@@ -134,7 +134,7 @@ def submit_invoice(vendor_id):
     
 @vendor_bp.route('/vendors/<int:vendor_id>/invoices/test_validator', methods=['POST'])
 def submit_invoice_validator(vendor_id):
-    """Submit an invoice for processing - ТЕПЕРЬ ИСПОЛЬЗУЕТ МУЛЬТИАГЕНТНУЮ СИСТЕМУ"""
+    """Submit an invoice for processing - NOW USES MULTI-AGENT SYSTEM"""
     try:
         vendor = Vendor.query.get(vendor_id)
         if not vendor:
@@ -162,13 +162,13 @@ def submit_invoice_validator(vendor_id):
         db.session.add(invoice)
         db.session.commit()
         
-        # ОБРАБОТКА ЧЕРЕЗ МУЛЬТИАГЕНТНУЮ СИСТЕМУ
+        # PROCESSING THROUGH MULTI-AGENT SYSTEM
         print(f"\n{'='*60}")
         print(f"MULTI-AGENT PROCESSING: Invoice #{invoice.id}")
         print(f"{'='*60}")
         
         try:
-            # Создаем экземпляр внутри функции (внутри контекста Flask)
+            # Create instance inside function (inside Flask context)
             multi_agent_finbot = MultiAgentFinBot()
             result = multi_agent_finbot.test_validator_invoice(invoice.id)
             
@@ -223,7 +223,7 @@ def get_invoice(invoice_id):
     invoice_data = invoice.to_dict()
     vendor_data = Vendor.query.get(invoice.vendor_id).to_dict()
     
-    # Парсим cascade analysis если есть
+    # Parse cascade analysis if present
     if invoice.ai_reasoning:
         try:
             reasoning_data = json.loads(invoice.ai_reasoning)
@@ -258,7 +258,7 @@ def list_invoices():
         vendor = Vendor.query.get(invoice.vendor_id)
         invoice_data['vendor_name'] = vendor.company_name if vendor else 'Unknown'
         
-        # Добавляем информацию о каскадных ошибках
+        # Add cascade error information
         if invoice.ai_reasoning:
             try:
                 reasoning_data = json.loads(invoice.ai_reasoning)
@@ -274,7 +274,7 @@ def list_invoices():
 
 @vendor_bp.route('/invoices/<int:invoice_id>/cascade-analysis', methods=['GET'])
 def get_cascade_analysis(invoice_id):
-    """Получить детальный анализ каскадных ошибок для инвойса"""
+    """Get detailed cascade error analysis for invoice"""
     invoice = Invoice.query.get(invoice_id)
     if not invoice:
         return jsonify({"error": "Invoice not found"}), 404

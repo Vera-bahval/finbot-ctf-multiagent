@@ -6,7 +6,7 @@ from datetime import datetime
 
 admin_bp = Blueprint('admin', __name__)
 
-# НЕ инициализируем здесь
+# DO NOT initialize here
 
 @admin_bp.route('/admin/invoices/pending', methods=['GET'])
 def get_pending_invoices():
@@ -153,7 +153,7 @@ def reprocess_invoice(invoice_id):
         invoice.processed_at = None
         db.session.commit()
         
-        # Используем мультиагентную систему
+        # Use multi-agent system
         multi_agent_finbot = MultiAgentFinBot()
         result = multi_agent_finbot.process_invoice(invoice_id)
         

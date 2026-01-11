@@ -57,7 +57,7 @@ else:
         fallback_db_path = os.path.join(temp_dir, 'app.db')
         clean_db_path = os.path.join(os.path.dirname(__file__), '..', 'cleandb', 'database', 'app.db')
         
-        # Создаем директорию если не существует
+        # Create directory if it doesn't exist
         os.makedirs(os.path.dirname(fallback_db_path), exist_ok=True)
         
         if not os.path.exists(fallback_db_path):
