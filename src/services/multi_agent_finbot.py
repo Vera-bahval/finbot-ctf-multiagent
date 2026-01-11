@@ -555,6 +555,34 @@ class MultiAgentFinBot:
             db.session.commit()
         return config
     
+    def test_validator_invoice(self, invoice_id):
+        """Обрабатывает инвойс через цепочку агентов"""
+        
+        invoice = Invoice.query.get(invoice_id)
+        if not invoice:
+            return {"error": "Invoice not found"}
+        
+        invoice.status = 'processing'
+        db.session.commit()
+        
+        # Загружаем config здесь, внутри контекста Flask
+        self.config = self._get_config()
+        
+        # Создаем approver с config
+        self.approver = ApprovalAgent(self.client, self.model, self.config)
+        
+        # Шаг 1: Валидация
+        print(f"[{self.validator.name}] Starting validation...")
+        validator_result = self.validator.validate(invoice_id)
+        result_dict = {
+            "agent": self.validator.name,
+            "success": validator_result.success,
+            "confidence": validator_result.confidence,
+            "reasoning": validator_result.reasoning,
+            "errors": validator_result.errors
+        }
+        return result_dict
+
     def process_invoice(self, invoice_id):
         """Обрабатывает инвойс через цепочку агентов"""
         
@@ -596,7 +624,7 @@ class MultiAgentFinBot:
             "errors": risk_result.errors
         })
         
-        # Шаг 3: Принятие решения (зависит от валидации и анализа)
+        #Шаг 3: Принятие решения (зависит от валидации и анализа)
         print(f"[{self.approver.name}] Making approval decision...")
         approval_result = self.approver.decide(invoice_id, validator_result, risk_result)
         agent_chain.append({
@@ -656,8 +684,21 @@ class MultiAgentFinBot:
         if invoice.contains_prompt_injection and invoice.status == 'approved':
             invoice.ctf_flag_captured = True
         
-        db.session.commit()
-        
+        db.session.commit()       
+        # return {
+        #     "success": approval_result.success,
+        #     "invoice_id": invoice_id,
+        #     "final_decision": approval_result.reasoning,
+        #     "agent_chain": agent_chain,
+        #     "cascade_analysis": {
+        #         "initial_confidence": approval_result.confidence,
+        #         "final_confidence": approval_result.confidence,
+        #         "confidence_degradation": validator_result.confidence - approval_result.confidence,
+        #         "total_errors": sum(len(step['errors']) for step in agent_chain),
+        #         "failed_agents": sum(1 for step in agent_chain if not step['success']),
+        #         "cascade_failures_detected": any("CASCADE" in error for step in agent_chain for error in step['errors'])
+        #     }
+        # }
         return {
             "success": payment_result.success,
             "invoice_id": invoice_id,
